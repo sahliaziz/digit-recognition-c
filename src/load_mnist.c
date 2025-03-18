@@ -5,79 +5,92 @@
 #include "load_mnist.h"
 
 
-int main() {
-    FILE *fp = fopen("train-images.idx3-ubyte", "rb");
-    if (!fp) {
+IDX * load_from_idx(char* filename) {
+    uint16_t zero_bytes;
+    uint32_t to_swap;
+    uint32_t size = 1;
+
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
         perror("Error opening file");
-        return 1;
+        fclose(f);
+        return NULL;
     }
 
-    struct idx *id = malloc(sizeof(struct idx));
-    if (!id) {
+    IDX *idx = malloc(sizeof(IDX));
+
+    if (!idx) {
         perror("Memory allocation failed");
-        fclose(fp);
-        return 1;
+        fclose(f);
+        return NULL;
     }
 
-    // Read the first 8 bytes: zero_bytes, data_type, and n_dims
-    fread(&id->zero_bytes, sizeof(uint16_t), 1, fp);
-    fread(&id->data_type, sizeof(uint8_t), 1, fp);
-    fread(&id->n_dims, sizeof(uint8_t), 1, fp);
+    if (!fread(&zero_bytes, sizeof(uint16_t), 1, f)) {
+        perror("Failed to read file");
+        fclose(f);
+        return NULL;
+    }
+
+    if (zero_bytes != 0) {
+        perror("Invalid file format");
+        fclose(f);
+        return NULL;
+    }
+
+    fread(&idx->data_type, sizeof(uint8_t), 1, f);
+    fread(&idx->n_dims, sizeof(uint8_t), 1, f);
 
     // Allocate memory for dimension sizes
-    id->dim_size = malloc(id->n_dims * sizeof(uint32_t));
-    if (!id->dim_size) {
+    idx->dim_size = malloc(idx->n_dims * sizeof(uint32_t));
+    if (!idx->dim_size) {
         perror("Memory allocation failed");
-        free(id);
-        fclose(fp);
-        return 1;
+        free(idx);
+        fclose(f);
+        return NULL;
     }
 
-    // Read the dimensions
-    uint32_t to_swap;
-    for (int i = 0; i < id->n_dims; i++) {
-        fread(&to_swap, sizeof(uint32_t), 1, fp);
-        id->dim_size[i] = __bswap_32(to_swap);
+    // Reading dimensions
+    for (int i = 0; i < idx->n_dims; i++) {
+        fread(&to_swap, sizeof(uint32_t), 1, f);
+        idx->dim_size[i] = __bswap_32(to_swap);
+        size *= idx->dim_size[i];
     }
 
     // First dimension represents the number of images
-    int n_examples = id->dim_size[0];
+    uint32_t n_examples = idx->dim_size[0];
+    idx->size = size;
 
-    // Allocate memory for image data (28x28 pixels per image)
-    id->data = malloc(n_examples * 28 * 28 * sizeof(uint8_t));
-    if (!id->data) {
+
+    // Allocating memory for image data (28x28 pixels per image)
+    idx->data = malloc(size * sizeof(uint8_t));
+    if (!idx->data) {
         perror("Memory allocation failed");
-        free(id->dim_size);
-        free(id);
-        fclose(fp);
-        return 1;
+        free(idx->dim_size);
+        free(idx);
+        fclose(f);
+        return NULL;
     }
 
     // Read all image data at once
-    fread(id->data, 1, n_examples * 28 * 28, fp);
+    fread(idx->data, 1, size, f);
+    fclose(f);
 
-    // Print some information for verification
-    printf("Zero bytes: %d\n", id->zero_bytes);
-    printf("Data type: %d\n", id->data_type);
-    printf("Number of dimensions: %d\n", id->n_dims);
+    return idx;
+}
+
+
+int main() {
+    IDX * X_test = load_from_idx("train-images.idx3-ubyte");
+
+    // Printing some information for debugging
+    printf("Data type: %d\n", X_test->data_type);
+    printf("Number of dimensions: %d\n", X_test->n_dims);
+    printf("Number of pixels: %d\n", X_test->size);
 
     printf("Dimensions: ");
-    for (int i = 0; i < id->n_dims; i++) {
-        printf("%d ", id->dim_size[i]);
+    for (int i = 0; i < X_test->n_dims; i++) {
+        printf("%d ", X_test->dim_size[i]);
     }
     printf("\n");
-
-    // Print first image pixels for debugging (optional)
-    for (int j = 0; j < 28 * 28; j++) {
-        printf("%02X ", id->data[j]);
-        if ((j + 1) % 28 == 0) printf("\n");  // New line every 28 pixels
-    }
-
-    // Cleanup
-    free(id->data);
-    free(id->dim_size);
-    free(id);
-    fclose(fp);
-
-    return 0;
 }
+
