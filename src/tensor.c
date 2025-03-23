@@ -131,8 +131,7 @@ Tensor *matmul(Tensor *matrix1, Tensor *matrix2) {
         for (uint32_t j = 0; j < result->shape[1]; j++) {
             result->data[i * result->shape[1] + j] = 0;
             for (uint32_t k = 0; k < matrix1->shape[1]; k++) {
-                uint32_t l = i * result->shape[1];
-                result->data[l + j] += matrix1->data[l + k] * matrix2->data[k * matrix2->shape[1] + j];
+                result->data[i * result->shape[1] + j] += matrix1->data[i * matrix1->shape[1] + k] * matrix2->data[k * matrix2->shape[1] + j];
             }
         }
     }
@@ -219,10 +218,174 @@ void reshape_tensor(Tensor *tensor, uint32_t n, uint32_t m) {
     tensor->size = n * m;
 
     return;
+}
 
+Tensor *argmax(Tensor *tensor) {
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    result->data_type = 0;
+    result->size = tensor->shape[0];
+    result->n_dims = 1;
+    result->shape = malloc(sizeof(uint32_t));
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    result->shape[0] = tensor->shape[0];
+
+    result->data = malloc(result->size * sizeof(double));
+    if (!result->data) {
+        perror("Memory allocation failed");
+        free(result->shape);
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->shape[0]; i++) {
+        double max = tensor->data[i * tensor->shape[1]];
+        uint32_t max_index = 0;
+        for (uint32_t j = 1; j < tensor->shape[1]; j++) {
+            if (tensor->data[i * tensor->shape[1] + j] > max) {
+                max = tensor->data[i * tensor->shape[1] + j];
+                max_index = j;
+            }
+        }
+        result->data[i] = max_index;
+    }
+
+    return result;
+}
+
+Tensor *random_tensor(uint32_t n, uint32_t m) {
+    Tensor *tensor = malloc(sizeof(Tensor));
+    if (!tensor) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    tensor->data_type = 0;
+    tensor->size = n * m;
+    tensor->n_dims = 2;
+    tensor->shape = malloc(2 * sizeof(uint32_t));
+    if (!tensor->shape) {
+        perror("Memory allocation failed");
+        free(tensor);
+        return NULL;
+    }
+
+    tensor->shape[0] = n;
+    tensor->shape[1] = m;
+
+    tensor->data = malloc(tensor->size * sizeof(double));
+    if (!tensor->data) {
+        perror("Memory allocation failed");
+        free(tensor->shape);
+        free(tensor);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->size; i++) {
+        tensor->data[i] = (double)rand() / RAND_MAX;
+    }
+
+    return tensor;
+}
+
+Tensor *ReLU(Tensor *tensor) {
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    result->data_type = 0;
+    result->size = tensor->size;
+    result->n_dims = tensor->n_dims;
+    result->shape = malloc(tensor->n_dims * sizeof(uint32_t));
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->n_dims; i++) {
+        result->shape[i] = tensor->shape[i];
+    }
+
+    result->data = malloc(result->size * sizeof(double));
+    if (!result->data) {
+        perror("Memory allocation failed");
+        free(result->shape);
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->size; i++) {
+        result->data[i] = tensor->data[i] > 0 ? tensor->data[i] : 0;
+    }
+
+    return result;
+}
+
+Tensor *softmax(Tensor *tensor) {
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    result->data_type = 0;
+    result->size = tensor->size;
+    result->n_dims = tensor->n_dims;
+    result->shape = malloc(tensor->n_dims * sizeof(uint32_t));
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->n_dims; i++) {
+        result->shape[i] = tensor->shape[i];
+    }
+
+    result->data = malloc(result->size * sizeof(double));
+    if (!result->data) {
+        perror("Memory allocation failed");
+        free(result->shape);
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->shape[0]; i++) {
+        double max = tensor->data[i * tensor->shape[1]];
+        for (uint32_t j = 1; j < tensor->shape[1]; j++) {
+            if (tensor->data[i * tensor->shape[1] + j] > max) {
+                max = tensor->data[i * tensor->shape[1] + j];
+            }
+        }
+
+        double sum = 0;
+        for (uint32_t j = 0; j < tensor->shape[1]; j++) {
+            result->data[i * tensor->shape[1] + j] = exp(tensor->data[i * tensor->shape[1] + j] - max);
+            sum += result->data[i * tensor->shape[1] + j];
+        }
+
+        for (uint32_t j = 0; j < tensor->shape[1]; j++) {
+            result->data[i * tensor->shape[1] + j] /= sum;
+        }
+    }
+
+    return result;
 }
 
 int main() {
+
     Tensor *X_test = idx_to_tensor("t10k-images.idx3-ubyte");
 
     // Printing some information for debugging
