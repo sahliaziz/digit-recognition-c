@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
 #include <byteswap.h>
 #include "tensor.h"
 
 
 Tensor *idx_to_tensor(char* filename) {
     uint16_t zero_bytes;
+    uint8_t data_type;
     uint32_t to_swap;
     uint32_t size = 1;
 
@@ -38,7 +40,7 @@ Tensor *idx_to_tensor(char* filename) {
         return NULL;
     }
 
-    fread(&tensor->data_type, sizeof(uint8_t), 1, f);
+    fread(&data_type, sizeof(uint8_t), 1, f);
     fread(&tensor->n_dims, sizeof(uint8_t), 1, f);
 
     // Allocate memory for dimension sizes
@@ -88,6 +90,45 @@ Tensor *idx_to_tensor(char* filename) {
     return tensor;
 }
 
+Tensor *copy_tensor(Tensor *tensor) {
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    result->size = tensor->size;
+    result->n_dims = tensor->n_dims;
+    result->shape = malloc(result->n_dims * sizeof(uint32_t));
+    result->data = malloc(result->size * sizeof(double));
+    
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor->n_dims; i++) {
+        result->shape[i] = tensor->shape[i];
+    }
+    
+    for (uint32_t i = 0; i < tensor->size; i++) {
+        result->data[i] = tensor->data[i];
+    }
+
+    return result;
+}
+
+Tensor *scale(Tensor *tensor, double factor) {
+    Tensor *result = copy_tensor(tensor);
+
+    for (uint32_t i = 0; i < tensor->size; i++) {
+        result->data[i] = tensor->data[i] * factor;
+    }
+
+    return result;
+}
+
 Tensor *matmul(Tensor *matrix1, Tensor *matrix2) {
     if (matrix1->n_dims != 2 || matrix2->n_dims != 2) {
         perror("Cannot multiply tensors of dimensions different than 2");
@@ -105,7 +146,6 @@ Tensor *matmul(Tensor *matrix1, Tensor *matrix2) {
         return NULL;
     }
 
-    result->data_type = 0;
     result->size = matrix1->shape[0] * matrix2->shape[1];
     result->n_dims = 2;
     result->shape = malloc(2 * sizeof(uint32_t));
@@ -152,7 +192,6 @@ Tensor *transpose(Tensor *tensor) {
         return NULL;
     }
     
-    result->data_type = 0;
     result->size = tensor->size;
     result->n_dims = 2;
     result->shape = malloc(2 * sizeof(uint32_t));
@@ -227,10 +266,9 @@ Tensor *argmax(Tensor *tensor) {
         return NULL;
     }
 
-    result->data_type = 0;
     result->size = tensor->shape[0];
-    result->n_dims = 1;
-    result->shape = malloc(sizeof(uint32_t));
+    result->n_dims = 2;
+    result->shape = malloc(2 * sizeof(uint32_t));
     if (!result->shape) {
         perror("Memory allocation failed");
         free(result);
@@ -238,6 +276,7 @@ Tensor *argmax(Tensor *tensor) {
     }
 
     result->shape[0] = tensor->shape[0];
+    result->shape[1] = 1;
 
     result->data = malloc(result->size * sizeof(double));
     if (!result->data) {
@@ -256,7 +295,7 @@ Tensor *argmax(Tensor *tensor) {
                 max_index = j;
             }
         }
-        result->data[i] = max_index;
+        result->data[i] = (double)max_index;
     }
 
     return result;
@@ -269,7 +308,6 @@ Tensor *random_tensor(uint32_t n, uint32_t m) {
         return NULL;
     }
 
-    tensor->data_type = 0;
     tensor->size = n * m;
     tensor->n_dims = 2;
     tensor->shape = malloc(2 * sizeof(uint32_t));
@@ -304,7 +342,6 @@ Tensor *ReLU(Tensor *tensor) {
         return NULL;
     }
 
-    result->data_type = 0;
     result->size = tensor->size;
     result->n_dims = tensor->n_dims;
     result->shape = malloc(tensor->n_dims * sizeof(uint32_t));
@@ -334,33 +371,7 @@ Tensor *ReLU(Tensor *tensor) {
 }
 
 Tensor *softmax(Tensor *tensor) {
-    Tensor *result = malloc(sizeof(Tensor));
-    if (!result) {
-        perror("Memory allocation failed");
-        return NULL;
-    }
-
-    result->data_type = 0;
-    result->size = tensor->size;
-    result->n_dims = tensor->n_dims;
-    result->shape = malloc(tensor->n_dims * sizeof(uint32_t));
-    if (!result->shape) {
-        perror("Memory allocation failed");
-        free(result);
-        return NULL;
-    }
-
-    for (uint32_t i = 0; i < tensor->n_dims; i++) {
-        result->shape[i] = tensor->shape[i];
-    }
-
-    result->data = malloc(result->size * sizeof(double));
-    if (!result->data) {
-        perror("Memory allocation failed");
-        free(result->shape);
-        free(result);
-        return NULL;
-    }
+    Tensor *result = copy_tensor(tensor);
 
     for (uint32_t i = 0; i < tensor->shape[0]; i++) {
         double max = tensor->data[i * tensor->shape[1]];
@@ -384,23 +395,147 @@ Tensor *softmax(Tensor *tensor) {
     return result;
 }
 
-int main() {
-
-    Tensor *X_test = idx_to_tensor("t10k-images.idx3-ubyte");
-
-    // Printing some information for debugging
-    printf("Data type: %d\n", X_test->data_type);
-    printf("Number of dimensions: %d\n", X_test->n_dims);
-    printf("Number of pixels: %d\n", X_test->size);
-
-    printf("Dimensions: ");
-    for (int i = 0; i < X_test->n_dims; i++) {
-        printf("%d ", X_test->shape[i]);
+Tensor *add(Tensor *tensor1, Tensor *tensor2) {
+    if (tensor1->size != tensor2->size) {
+        perror("Cannot add tensors of different sizes");
+        return NULL;
     }
-    printf("\n");
 
-    for (int i = 0; i < 784; i++) {
-        printf("%04f ", X_test->data[i]);
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
     }
+
+    result->size = tensor1->size;
+    result->n_dims = tensor1->n_dims;
+    result->shape = malloc(tensor1->n_dims * sizeof(uint32_t));
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor1->n_dims; i++) {
+        result->shape[i] = tensor1->shape[i];
+    }
+
+    result->data = malloc(result->size * sizeof(double));
+    if (!result->data) {
+        perror("Memory allocation failed");
+        free(result->shape);
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < tensor1->size; i++) {
+        result->data[i] = tensor1->data[i] + tensor2->data[i];
+    }
+
+    return result;
 }
 
+Tensor *matrix_add_bias(Tensor *matrix, Tensor *bias) {
+    if (matrix->n_dims != 2 || bias->shape[1] != 1 || matrix->shape[1] != bias->shape[0]) {
+        perror("Shapes are not compatible for bias addition");
+        return NULL;
+    }
+
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    result->size = matrix->size;
+    result->n_dims = 2;
+    result->shape = malloc(2 * sizeof(uint32_t));
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    result->shape[0] = matrix->shape[0];
+    result->shape[1] = matrix->shape[1];
+
+    result->data = malloc(result->size * sizeof(double));
+    if (!result->data) {
+        perror("Memory allocation failed");
+        free(result->shape);
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < matrix->shape[0]; i++) {
+        for (uint32_t j = 0; j < matrix->shape[1]; j++) {
+            result->data[i * matrix->shape[1] + j] = matrix->data[i * matrix->shape[1] + j] + bias->data[j];
+        }
+    }
+
+    return result;
+}
+
+Tensor *one_hot(Tensor *labels) {
+    Tensor *result = malloc(sizeof(Tensor));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    result->size = 10 * labels->size;
+    result->n_dims = 2;
+    result->shape = malloc(sizeof(uint32_t));
+    if (!result->shape) {
+        perror("Memory allocation failed");
+        free(result);
+        return NULL;
+    }
+
+    result->shape[0] = labels->size;
+    result->shape[1] = 10;
+
+    result->data = malloc(result->size * sizeof(double));
+    if (!result->data) {
+        perror("Memory allocation failed");
+        free(result->shape);
+        free(result);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < labels->size; i++) {
+        for (uint32_t j = 0; j < 10; j++) {
+            result->data[i * 10 + j] = j == labels->data[i] ? 1.0 : 0.0;
+        }
+    }
+
+    return result;
+}
+
+int main() {
+
+    Tensor *X_test = idx_to_tensor("train-images.idx3-ubyte");
+    Tensor *Y_test = idx_to_tensor("train-labels.idx1-ubyte");
+
+    reshape_tensor(X_test, 60000, 784);
+
+    Tensor *W1 = random_tensor(784, 128);
+    Tensor *b1 = random_tensor(128, 1);
+    Tensor *W2 = random_tensor(128, 10);
+    Tensor *b2 = random_tensor(10, 1);
+
+    Tensor *Y_enc = one_hot(Y_test);
+
+    Tensor *Z1 = matrix_add_bias(matmul(X_test, W1), b1);
+    Tensor *A1 = ReLU(Z1);
+
+    Tensor *Z2 = matrix_add_bias(matmul(A1, W2), b2);
+
+    Tensor *A2 = softmax(Z2);
+
+    Tensor *Y_pred = argmax(A2);
+
+    Tensor *d_pred = add(Y_enc, scale(Y_pred, -1));
+    Tensor *dW2 = matmul(transpose(A1), d_pred);
+    
+}

@@ -1,5 +1,4 @@
 typedef struct {
-    uint8_t data_type;
     uint32_t size;
     uint8_t n_dims;
     uint32_t *shape;
@@ -13,3 +12,10 @@ Tensor *transpose(Tensor *tensor);
 void free_tensor(Tensor *tensor);
 double sum(Tensor *tensor);
 void reshape_tensor(Tensor *tensor, uint32_t n, uint32_t m);
+Tensor *one_hot(Tensor *labels);
+Tensor *random_tensor(uint32_t n, uint32_t m);
+Tensor *argmax(Tensor *tensor);
+Tensor *ReLU(Tensor *tensor);
+Tensor *softmax(Tensor *tensor);
+Tensor *add(Tensor *tensor1, Tensor *tensor2);
+Tensor *copy_tensor(Tensor *tensor);
