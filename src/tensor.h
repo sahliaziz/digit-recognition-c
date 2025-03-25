@@ -10,7 +10,7 @@ Tensor *idx_to_tensor(char*);
 Tensor *matmul(Tensor *matrix1, Tensor *matrix2);
 Tensor *transpose(Tensor *tensor);
 void free_tensor(Tensor *tensor);
-double sum(Tensor *tensor);
+Tensor *sum(Tensor *tensor, int8_t);
 void reshape_tensor(Tensor *tensor, uint32_t n, uint32_t m);
 Tensor *one_hot(Tensor *labels);
 Tensor *random_tensor(uint32_t n, uint32_t m);
