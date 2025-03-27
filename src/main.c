@@ -5,8 +5,7 @@
 #include <time.h>
 #include "tensor.h"
 
-int main()
-{
+int main() {
     srand(1337);
     Tensor *X_train = scale(idx_to_tensor("train-images.idx3-ubyte"), 1.0 / 255.0);
     Tensor *Y_train = idx_to_tensor("train-labels.idx1-ubyte");
@@ -21,7 +20,7 @@ int main()
 
     Tensor *Y_enc = one_hot(Y_train);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 1; i++) {
         // Forward pass
         Tensor *Z1 = matrix_add_bias(matmul(X_train, W1), b1);
         Tensor *A1 = ReLU(Z1);
@@ -29,7 +28,7 @@ int main()
         Tensor *Y_pred = softmax(Z2);
 
         // Backward pass
-        Tensor *d_pred = add(Y_pred, scale(Y_enc, -1));
+        Tensor *d_pred = add(Y_enc, scale(Y_pred, -1));
         Tensor *d_W2 = matmul(transpose(A1), d_pred);
         Tensor *d_b2 = sum(d_pred, 0);
         reshape_tensor(d_b2, 10, 1);
@@ -64,7 +63,7 @@ int main()
 
         //evaluate_model(X_train, Y_train, W1, b1, W2, b2);
 
-        //show_tensor(Y_pred);
+        show_tensor(Y_pred);
 
         //printf("Loss: %f\n", cross_entropy_loss(Y_train, Y_pred));
     }
@@ -80,5 +79,4 @@ int main()
     free_tensor(Y_enc);
 
     return 0;
-
 }

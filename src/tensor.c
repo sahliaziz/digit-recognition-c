@@ -250,7 +250,6 @@ Tensor *transpose(Tensor *tensor)
             result->data[j * result->shape[1] + i] = tensor->data[i * tensor->shape[1] + j];
         }
     }
-
     return result;
 }
 
@@ -335,7 +334,7 @@ void reshape_tensor(Tensor *tensor, uint32_t n, uint32_t m)
     }
 
     tensor->n_dims = 2;
-    free(tensor->shape); // Free the old shape memory
+    free(tensor->shape);
     tensor->shape = malloc(2 * sizeof(uint32_t));
     if (!tensor->shape)
     {
@@ -666,16 +665,19 @@ void show_tensor(Tensor *tensor)
     printf("\n");
 }
 
-float cross_entropy_loss(Tensor *Y_true, Tensor *Y_pred) {
+float cross_entropy_loss(Tensor *Y_true, Tensor *Y_pred)
+{
     float loss = 0.0;
-    for (uint32_t i = 0; i < Y_true->size; i++) {
+    for (uint32_t i = 0; i < Y_true->size; i++)
+    {
         uint32_t true_label = (uint32_t)Y_true->data[i];
         loss -= log(Y_pred->data[i * Y_pred->shape[1] + true_label] + 1e-10);
     }
     return loss / Y_true->shape[0];
 }
 
-void evaluate_model(Tensor *X, Tensor *Y, Tensor *W1, Tensor *b1, Tensor *W2, Tensor *b2) {
+void evaluate_model(Tensor *X, Tensor *Y, Tensor *W1, Tensor *b1, Tensor *W2, Tensor *b2)
+{
     // Forward pass
     Tensor *Z1 = matrix_add_bias(matmul(X, W1), b1);
     Tensor *A1 = ReLU(Z1);
@@ -686,8 +688,10 @@ void evaluate_model(Tensor *X, Tensor *Y, Tensor *W1, Tensor *b1, Tensor *W2, Te
     Tensor *pred_labels = argmax(Y_pred);
 
     uint32_t correct = 0;
-    for (uint32_t i = 0; i < Y->shape[0]; i++) {
-        if (pred_labels->data[i] == Y->data[i]) {
+    for (uint32_t i = 0; i < Y->shape[0]; i++)
+    {
+        if (pred_labels->data[i] == Y->data[i])
+        {
             correct++;
         }
     }
