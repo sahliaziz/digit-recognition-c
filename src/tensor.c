@@ -71,7 +71,7 @@ Tensor *idx_to_tensor(char *filename)
     tensor->size = size;
 
     // Allocating memory for image data (28x28 pixels per image)
-    tensor->data = malloc(size * sizeof(double));
+    tensor->data = malloc(size * sizeof(float));
     if (!tensor->data)
     {
         perror("Memory allocation failed");
@@ -86,10 +86,10 @@ Tensor *idx_to_tensor(char *filename)
     // Reading all image data to the buffer first
     fread(buf, 1, size, f);
 
-    // Transfering image data to tensor as double
+    // Transfering image data to tensor as float
     for (uint32_t i = 0; i < size; i++)
     {
-        tensor->data[i] = (double)buf[i];
+        tensor->data[i] = (float)buf[i];
     }
 
     free(buf);
@@ -110,7 +110,7 @@ Tensor *copy_tensor(Tensor *tensor)
     result->size = tensor->size;
     result->n_dims = tensor->n_dims;
     result->shape = malloc(result->n_dims * sizeof(uint32_t));
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
 
     if (!result->shape)
     {
@@ -132,7 +132,7 @@ Tensor *copy_tensor(Tensor *tensor)
     return result;
 }
 
-Tensor *scale(Tensor *tensor, double factor)
+Tensor *scale(Tensor *tensor, float factor)
 {
     Tensor *result = copy_tensor(tensor);
 
@@ -179,7 +179,7 @@ Tensor *matmul(Tensor *matrix1, Tensor *matrix2)
     result->shape[1] = matrix2->shape[1];
     result->size = result->shape[0] * result->shape[1];
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -234,7 +234,7 @@ Tensor *transpose(Tensor *tensor)
     result->shape[1] = tensor->shape[0];
     result->size = result->shape[0] * result->shape[1];
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -299,7 +299,7 @@ Tensor *sum(Tensor *tensor, int8_t axis)
     }
     result->size = new_size;
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -372,7 +372,7 @@ Tensor *argmax(Tensor *tensor)
     result->shape[0] = tensor->shape[0];
     result->shape[1] = 1;
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -383,7 +383,7 @@ Tensor *argmax(Tensor *tensor)
 
     for (uint32_t i = 0; i < tensor->shape[0]; i++)
     {
-        double max = tensor->data[i * tensor->shape[1]];
+        float max = tensor->data[i * tensor->shape[1]];
         uint32_t max_index = 0;
         for (uint32_t j = 1; j < tensor->shape[1]; j++)
         {
@@ -393,7 +393,7 @@ Tensor *argmax(Tensor *tensor)
                 max_index = j;
             }
         }
-        result->data[i] = (double)max_index;
+        result->data[i] = (float)max_index;
     }
 
     return result;
@@ -421,7 +421,7 @@ Tensor *random_tensor(uint32_t n, uint32_t m)
     tensor->shape[0] = n;
     tensor->shape[1] = m;
 
-    tensor->data = malloc(tensor->size * sizeof(double));
+    tensor->data = malloc(tensor->size * sizeof(float));
     if (!tensor->data)
     {
         perror("Memory allocation failed");
@@ -432,7 +432,7 @@ Tensor *random_tensor(uint32_t n, uint32_t m)
 
     for (uint32_t i = 0; i < tensor->size; i++)
     {
-        tensor->data[i] = (double)rand() / RAND_MAX;
+        tensor->data[i] = (float)rand() / RAND_MAX;
     }
 
     return tensor;
@@ -462,7 +462,7 @@ Tensor *ReLU(Tensor *tensor)
         result->shape[i] = tensor->shape[i];
     }
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -485,7 +485,7 @@ Tensor *softmax(Tensor *tensor)
 
     for (uint32_t i = 0; i < tensor->shape[0]; i++)
     {
-        double max = tensor->data[i * tensor->shape[1]];
+        float max = tensor->data[i * tensor->shape[1]];
         for (uint32_t j = 1; j < tensor->shape[1]; j++)
         {
             if (tensor->data[i * tensor->shape[1] + j] > max)
@@ -494,7 +494,7 @@ Tensor *softmax(Tensor *tensor)
             }
         }
 
-        double sum = 0;
+        float sum = 0;
         for (uint32_t j = 0; j < tensor->shape[1]; j++)
         {
             result->data[i * tensor->shape[1] + j] = exp(tensor->data[i * tensor->shape[1] + j] - max);
@@ -540,7 +540,7 @@ Tensor *add(Tensor *tensor1, Tensor *tensor2)
         result->shape[i] = tensor1->shape[i];
     }
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -585,7 +585,7 @@ Tensor *matrix_add_bias(Tensor *matrix, Tensor *bias)
     result->shape[0] = matrix->shape[0];
     result->shape[1] = matrix->shape[1];
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -627,7 +627,7 @@ Tensor *one_hot(Tensor *labels)
     result->shape[0] = labels->size;
     result->shape[1] = 10;
 
-    result->data = malloc(result->size * sizeof(double));
+    result->data = malloc(result->size * sizeof(float));
     if (!result->data)
     {
         perror("Memory allocation failed");
@@ -640,8 +640,8 @@ Tensor *one_hot(Tensor *labels)
     {
         for (uint32_t j = 0; j < 10; j++)
         {
-            result->data[i * 10 + j] = (double)j == labels->data[i] ? 1.0 : 0.0;
-            // printf("%f %f %d\n", (double)j, labels->data[i], j == labels->data[i]);
+            result->data[i * 10 + j] = (float)j == labels->data[i] ? 1.0 : 0.0;
+            // printf("%f %f %d\n", (float)j, labels->data[i], j == labels->data[i]);
         }
     }
     return result;
@@ -666,8 +666,8 @@ void show_tensor(Tensor *tensor)
     printf("\n");
 }
 
-double cross_entropy_loss(Tensor *Y_true, Tensor *Y_pred) {
-    double loss = 0.0;
+float cross_entropy_loss(Tensor *Y_true, Tensor *Y_pred) {
+    float loss = 0.0;
     for (uint32_t i = 0; i < Y_true->size; i++) {
         uint32_t true_label = (uint32_t)Y_true->data[i];
         loss -= log(Y_pred->data[i * Y_pred->shape[1] + true_label] + 1e-10);
@@ -692,7 +692,7 @@ void evaluate_model(Tensor *X, Tensor *Y, Tensor *W1, Tensor *b1, Tensor *W2, Te
         }
     }
 
-    double accuracy = (double)correct / Y->shape[0];
+    float accuracy = (float)correct / Y->shape[0];
     printf("Accuracy: %f\n", accuracy);
 
     // Free allocated memory
@@ -701,82 +701,4 @@ void evaluate_model(Tensor *X, Tensor *Y, Tensor *W1, Tensor *b1, Tensor *W2, Te
     free_tensor(Z2);
     free_tensor(Y_pred);
     free_tensor(pred_labels);
-}
-
-int main()
-{
-    srand(1337);
-    Tensor *X_train = scale(idx_to_tensor("train-images.idx3-ubyte"), 1.0 / 255.0);
-    Tensor *Y_train = idx_to_tensor("train-labels.idx1-ubyte");
-
-    reshape_tensor(X_train, 60000, 784);
-    reshape_tensor(Y_train, 60000, 1);
-
-    Tensor *W1 = scale(random_tensor(784, 128), sqrt(2.0 / 784));
-    Tensor *b1 = scale(random_tensor(128, 1), 0.01);
-    Tensor *W2 = scale(random_tensor(128, 10), sqrt(2.0 / 128));
-    Tensor *b2 = scale(random_tensor(10, 1), 0.01);
-
-    Tensor *Y_enc = one_hot(Y_train);
-
-    for (int i = 0; i < 3; i++) {
-        // Forward pass
-        Tensor *Z1 = matrix_add_bias(matmul(X_train, W1), b1);
-        Tensor *A1 = ReLU(Z1);
-        Tensor *Z2 = matrix_add_bias(matmul(A1, W2), b2);
-        Tensor *Y_pred = softmax(Z2);
-
-        // Backward pass
-        Tensor *d_pred = add(Y_pred, scale(Y_enc, -1));
-        Tensor *d_W2 = matmul(transpose(A1), d_pred);
-        Tensor *d_b2 = sum(d_pred, 0);
-        reshape_tensor(d_b2, 10, 1);
-        Tensor *d_A1 = matmul(d_pred, transpose(W2));
-        for (uint32_t i = 0; i < Z1->size; i++)
-        {
-            if (Z1->data[i] <= 0){
-                d_A1->data[i] = 0;
-            }
-        }
-        Tensor *d_W1 = matmul(transpose(X_train), d_A1);
-        Tensor *d_b1 = sum(d_A1, 0);
-        reshape_tensor(d_b1, 128, 1);
-
-        // Update weights and biases
-        W1 = add(W1, scale(d_W1, -0.005));
-        b1 = add(b1, scale(d_b1, -0.005));
-        W2 = add(W2, scale(d_W2, -0.005));
-        b2 = add(b2, scale(d_b2, -0.005));
-
-        // Free up some memory
-        free_tensor(Z1);
-        free_tensor(A1);
-        free_tensor(Z2);
-        free_tensor(Y_pred);
-        free_tensor(d_pred);
-        free_tensor(d_W2);
-        free_tensor(d_b2);
-        free_tensor(d_A1);
-        free_tensor(d_W1);
-        free_tensor(d_b1);
-
-        //evaluate_model(X_train, Y_train, W1, b1, W2, b2);
-
-        //show_tensor(Y_pred);
-
-        //printf("Loss: %f\n", cross_entropy_loss(Y_train, Y_pred));
-    }
-
-    evaluate_model(X_train, Y_train, W1, b1, W2, b2);
-
-    free_tensor(X_train);
-    free_tensor(Y_train);
-    free_tensor(W1);
-    free_tensor(b1);
-    free_tensor(W2);
-    free_tensor(b2);
-    free_tensor(Y_enc);
-
-    return 0;
-
 }
