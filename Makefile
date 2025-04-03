@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -g -Wextra -O2 -I./include -lm
+CFLAGS = -Wall -g -Wextra -Wfatal-errors -O2 -I./include -lm
 
 # Source files
 SRCS = src/main.c src/tensor.c src/neural_network.c

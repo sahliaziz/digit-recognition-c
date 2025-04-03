@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <byteswap.h>
+#include <string.h>
 #include <time.h>
 #include "tensor.h"
 
@@ -12,6 +13,7 @@ static void* tensor_malloc(size_t size, const char* error_msg) {
     void* ptr = malloc(size);
     if (!ptr) {
         fprintf(stderr, "Memory allocation failed: %s\n", error_msg);
+        exit(1);  // Exit immediately on allocation failure
     }
     return ptr;
 }
@@ -38,6 +40,7 @@ static bool tensor_check_compatibility(const Tensor* t1, const Tensor* t2, const
     if (t1->size != t2->size) {
         fprintf(stderr, "%s: Incompatible tensor sizes\n", op);
         return false;
+        exit(1);
     }
     return true;
 }
@@ -65,6 +68,7 @@ Tensor* tensor_create(uint8_t n_dims, const uint32_t* shape) {
     if (!tensor_allocate_data(tensor, size)) {
         tensor_free(tensor);
         return NULL;
+        exit(1);
     }
 
     return tensor;
@@ -74,7 +78,7 @@ Tensor* tensor_create_from_idx(const char* filename) {
     FILE* f = fopen(filename, "rb");
     if (!f) {
         fprintf(stderr, "Error opening file: %s\n", filename);
-        return NULL;
+        exit(1);  // Exit immediately on file open failure
     }
 
     uint16_t zero_bytes;
@@ -82,7 +86,7 @@ Tensor* tensor_create_from_idx(const char* filename) {
     if (fread(&zero_bytes, sizeof(uint16_t), 1, f) != 1 || zero_bytes != 0) {
         fprintf(stderr, "Invalid IDX file format\n");
         fclose(f);
-        return NULL;
+        exit(1);  // Exit immediately on invalid file format
     }
 
     fread(&data_type, sizeof(uint8_t), 1, f);
@@ -90,14 +94,14 @@ Tensor* tensor_create_from_idx(const char* filename) {
     Tensor* tensor = tensor_create_empty();
     if (!tensor) {
         fclose(f);
-        return NULL;
+        exit(1);  // Exit immediately on tensor creation failure
     }
 
     fread(&tensor->n_dims, sizeof(uint8_t), 1, f);
     if (!tensor_allocate_shape(tensor, tensor->n_dims)) {
         tensor_free(tensor);
         fclose(f);
-        return NULL;
+        exit(1);  // Exit immediately on shape allocation failure
     }
 
     uint32_t size = 1;
@@ -113,6 +117,7 @@ Tensor* tensor_create_from_idx(const char* filename) {
         tensor_free(tensor);
         fclose(f);
         return NULL;
+        exit(1);
     }
 
     // Read data as uint8_t and convert to float
@@ -121,6 +126,7 @@ Tensor* tensor_create_from_idx(const char* filename) {
         tensor_free(tensor);
         fclose(f);
         return NULL;
+        exit(1);
     }
 
     fread(temp_buf, sizeof(uint8_t), size, f);
@@ -173,11 +179,11 @@ bool tensor_reshape(Tensor* tensor, uint32_t n, uint32_t m) {
     return true;
 }
 
-// Mathematical operations
 Tensor* tensor_mult(const Tensor* a, const Tensor* b) {
     if (!a || !b || a->n_dims != 2 || b->n_dims != 2 || a->shape[1] != b->shape[0]) {
         fprintf(stderr, "Invalid matrices for multiplication\n");
         return NULL;
+        exit(1);
     }
 
     uint32_t shape[2] = {a->shape[0], b->shape[1]};
@@ -223,7 +229,6 @@ Tensor* tensor_scale(const Tensor* tensor, float factor) {
     return result;
 }
 
-// Neural network specific operations
 Tensor* tensor_relu(const Tensor* tensor) {
     if (!tensor) return NULL;
 
@@ -240,7 +245,8 @@ Tensor* tensor_relu(const Tensor* tensor) {
 Tensor* tensor_softmax(const Tensor* tensor) {
     if (!tensor || tensor->n_dims != 2) {
         fprintf(stderr, "Invalid tensor for softmax\n");
-        return NULL;
+        //return NULL;
+        exit(1);
     }
 
     Tensor* result = tensor_copy(tensor);
@@ -274,7 +280,7 @@ Tensor* tensor_softmax(const Tensor* tensor) {
 Tensor* tensor_one_hot(const Tensor* labels) {
     if (!labels) return NULL;
 
-    uint32_t shape[2] = {labels->size, 10};  // Assuming 10 classes
+    uint32_t shape[2] = {labels->size, 10};
     Tensor* result = tensor_create(2, shape);
     if (!result) return NULL;
 
@@ -308,7 +314,6 @@ Tensor* tensor_argmax(const Tensor* tensor) {
                 max_idx = j;
             }
         }
-
         result->data[i] = (float)max_idx;
     }
 
@@ -319,10 +324,11 @@ float tensor_cross_entropy_loss(const Tensor* labels, const Tensor* predictions)
     if (!labels || !predictions || labels->shape[0] != predictions->shape[0]) {
         fprintf(stderr, "Invalid tensors for cross entropy\n");
         return INFINITY;
+        exit(1);
     }
 
     float loss = 0.0f;
-    const float epsilon = 1e-10f;  // For numerical stability
+    const float epsilon = 1e-10f;
 
     for (uint32_t i = 0; i < labels->size; i++) {
         uint32_t true_label = (uint32_t)labels->data[i];
@@ -346,8 +352,8 @@ void tensor_print(const Tensor* tensor) {
     printf("\n");
 
     if (tensor->n_dims == 2) {
-        for (uint32_t i = 0; i < tensor->shape[0]; i++) {
-            for (uint32_t j = 0; j < tensor->shape[1]; j++) {
+        for (uint32_t i = 0; i < 5; i++) { // tensor->shape[0]
+            for (uint32_t j = 0; j < fmin(tensor->shape[1], 10); j++) {
                 printf("%8.4f ", tensor->data[i * tensor->shape[1] + j]);
             }
             printf("\n");
@@ -366,6 +372,7 @@ Tensor *tensor_sum(const Tensor *tensor, int8_t axis) {
     if (axis < 0 || axis >= tensor->n_dims) {
         perror("Invalid axis");
         return NULL;
+        exit(1);
     }
 
     Tensor *result = malloc(sizeof(Tensor));
@@ -373,6 +380,7 @@ Tensor *tensor_sum(const Tensor *tensor, int8_t axis) {
     {
         perror("Memory allocation failed");
         return NULL;
+        exit(1);
     }
 
     result->n_dims = tensor->n_dims;
@@ -382,6 +390,7 @@ Tensor *tensor_sum(const Tensor *tensor, int8_t axis) {
         perror("Memory allocation failed");
         free(result);
         return NULL;
+        exit(1);
     }
 
     for (uint32_t i = 0; i < tensor->n_dims; i++)
@@ -404,6 +413,7 @@ Tensor *tensor_sum(const Tensor *tensor, int8_t axis) {
         free(result->shape);
         free(result);
         return NULL;
+        exit(1);
     }
 
     uint32_t stride = 1;
@@ -455,20 +465,75 @@ Tensor *tensor_transpose(const Tensor *tensor) {
 }
 
 Tensor *tensor_add_bias(const Tensor *matrix, const Tensor *bias) {
-    if (!matrix || !bias || matrix->n_dims != 2 || bias->n_dims != 2 || matrix->shape[1] != bias->shape[1]) {
+    if (!matrix || !bias || matrix->n_dims != 2 || bias->n_dims != 2 || matrix->shape[1] != bias->shape[0]) {
         fprintf(stderr, "Invalid matrix or bias for addition\n");
-        return NULL;
+        //return NULL;
+        exit(1);
     }
 
-    Tensor *result = tensor_create(2, (uint32_t[]){matrix->shape[0], matrix->shape[1] + 1});
+    Tensor *result = tensor_copy(matrix);
     if (!result) return NULL;
     
     for (uint32_t i = 0; i < matrix->shape[0]; i++) {
         for (uint32_t j = 0; j < matrix->shape[1]; j++) {
-            result->data[i * (matrix->shape[1] + 1) + j] = matrix->data[i * matrix->shape[1] + j];
+            result->data[i * matrix->shape[1] + j] = matrix->data[i * matrix->shape[1] + j] + bias->data[j];
         }
-        result->data[i * (matrix->shape[1] + 1) + matrix->shape[1]] = bias->data[i];
     }
 
     return result;
+}
+
+Tensor **tensor_batch(Tensor *tensor, uint32_t batch_size, uint32_t *n_batches) {
+    if (batch_size == 0 || tensor->shape[0] % batch_size != 0) {
+        perror("Invalid batch size");
+        return NULL;
+        exit(1);
+    }
+
+    *n_batches = tensor->shape[0] / batch_size;
+    Tensor **batches = malloc(*n_batches * sizeof(Tensor *));
+    if (!batches) {
+        perror("Memory allocation failed");
+        return NULL;
+        exit(1);
+    }
+
+    for (uint32_t i = 0; i < *n_batches; i++) {
+        batches[i] = malloc(sizeof(Tensor));
+        if (!batches[i]) {
+            perror("Memory allocation failed");
+            for (uint32_t j = 0; j < i; j++)
+                tensor_free(batches[j]);
+            free(batches);
+            return NULL;
+            exit(1);
+        }
+
+        batches[i]->n_dims = tensor->n_dims;
+        batches[i]->shape = malloc(tensor->n_dims * sizeof(uint32_t));
+        if (!batches[i]->shape){
+            perror("Memory allocation failed");
+            for (uint32_t j = 0; j <= i; j++)
+                tensor_free(batches[j]);
+            free(batches);
+            return NULL;
+            exit(1);
+        }
+
+        memcpy(batches[i]->shape, tensor->shape, tensor->n_dims * sizeof(uint32_t));
+        batches[i]->shape[0] = batch_size;
+        batches[i]->size = batch_size * tensor->shape[1];
+        batches[i]->data = malloc(batches[i]->size * sizeof(float));
+        if (!batches[i]->data) {
+            perror("Memory allocation failed");
+            for (uint32_t j = 0; j <= i; j++)
+                tensor_free(batches[j]);
+            free(batches);
+            return NULL;
+        }
+
+        memcpy(batches[i]->data, tensor->data + i * batches[i]->size, batches[i]->size * sizeof(float));
+    }
+
+    return batches;
 }

@@ -32,6 +32,7 @@ Tensor *tensor_relu(const Tensor *tensor);
 Tensor *tensor_softmax(const Tensor *tensor);
 Tensor *tensor_one_hot(const Tensor *labels);
 Tensor *tensor_argmax(const Tensor *tensor);
+Tensor **tensor_batch(Tensor *tensor, uint32_t batch_size, uint32_t *n_batches);
 
 // Model evaluation
 float tensor_cross_entropy_loss(const Tensor *labels, const Tensor *predictions);
