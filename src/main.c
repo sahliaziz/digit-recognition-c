@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "tensor.h"
 #include "neural_network.h"
 
@@ -11,8 +12,7 @@
 #define NUM_EPOCHS 2
 
 int main() {
-    // Set random seed for reproducibility
-    srand(1337);
+    srand(time(NULL));
 
     // Load and preprocess data
     Tensor *X_train = tensor_create_from_idx("data/train-images.idx3-ubyte");
@@ -40,7 +40,7 @@ int main() {
 
     printf("Training data loaded and preprocessed.\n");
 
-
+    
     // Create and initialize neural network
     NeuralNetwork *nn = nn_create(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
     if (!nn) {
@@ -51,7 +51,7 @@ int main() {
     }
 
     printf("Neural network created with input size %d, hidden size %d, output size %d.\n",
-           INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
+          INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
 
 
     // Train the network
@@ -61,9 +61,7 @@ int main() {
             nn_train(nn, X_batch[i], Y_batch[i], LEARNING_RATE);
         }
     }
-
     printf("Training completed.\n");
-
 
     // Evaluate the model
     float accuracy_train = nn_evaluate_model(nn, X_train, Y_train);
@@ -72,11 +70,12 @@ int main() {
     printf("Model accuracy (tarining set): %.2f%%\n", accuracy_train * 100);
     printf("Model accuracy (test set): %.2f%%\n", accuracy_test * 100);
 
-
     // Cleanup
     nn_free(nn);
     tensor_free(X_train);
     tensor_free(Y_train);
+    tensor_free(X_test);
+    tensor_free(Y_test);
 
     return 0;
 }

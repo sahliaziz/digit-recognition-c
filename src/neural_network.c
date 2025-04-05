@@ -3,12 +3,20 @@
 #include <math.h>
 #include "neural_network.h"
 
-NeuralNetwork* nn_create(uint32_t input_size, uint32_t hidden_size, uint32_t output_size) {
+NeuralNetwork *nn_create(uint16_t input_size, uint16_t hidden_size, uint16_t output_size) {
     NeuralNetwork* nn = malloc(sizeof(NeuralNetwork));
     if (!nn) {
         fprintf(stderr, "Failed to allocate neural network\n");
-        exit(1);  // Exit immediately on allocation failure
+        return NULL;
     }
+
+    nn->input_size = input_size;
+    nn->hidden_size = hidden_size;
+    nn->output_size = output_size;
+
+    printf("%d\n", nn->input_size);
+    printf("%d\n", nn->hidden_size); 
+    printf("%d\n", nn->output_size);
 
     // Initialize weights with He initialization
     nn->W1 = tensor_scale(tensor_create_random(input_size, hidden_size), 
@@ -21,7 +29,7 @@ NeuralNetwork* nn_create(uint32_t input_size, uint32_t hidden_size, uint32_t out
     if (!nn->W1 || !nn->b1 || !nn->W2 || !nn->b2) {
         fprintf(stderr, "Failed to initialize neural network weights\n");
         nn_free(nn);
-        exit(1);  // Exit immediately on weight initialization failure
+        return NULL;
     }
 
     return nn;
@@ -37,8 +45,8 @@ void nn_free(NeuralNetwork *nn) {
     }
 }
 
-static Tensor* forward_pass(const NeuralNetwork *nn, const Tensor *X, 
-                          Tensor **Z1_out, Tensor **A1_out) {
+static Tensor *nn_forward_pass(const NeuralNetwork *nn, const Tensor *X, 
+                              Tensor **Z1_out, Tensor **A1_out) {
     *Z1_out = tensor_add_bias(tensor_mult(X, nn->W1), nn->b1);
     *A1_out = tensor_relu(*Z1_out);
     Tensor *Z2 = tensor_add_bias(tensor_mult(*A1_out, nn->W2), nn->b2);
@@ -52,7 +60,7 @@ void nn_train(NeuralNetwork *nn, const Tensor *X, const Tensor *Y,
 
     // Forward pass
     Tensor *Z1, *A1;
-    Tensor *Y_pred = forward_pass(nn, X, &Z1, &A1);
+    Tensor *Y_pred = nn_forward_pass(nn, X, &Z1, &A1);
     if (!Y_pred) {
         tensor_free(Y_enc);
         return;
@@ -101,7 +109,7 @@ void nn_train(NeuralNetwork *nn, const Tensor *X, const Tensor *Y,
 
 void nn_predict(const NeuralNetwork *nn, const Tensor *X) {
     Tensor *Z1, *A1;
-    Tensor *predictions = forward_pass(nn, X, &Z1, &A1);
+    Tensor *predictions = nn_forward_pass(nn, X, &Z1, &A1);
     if (!predictions) return;
 
     // Convert to class predictions
@@ -148,4 +156,59 @@ float nn_evaluate_model(NeuralNetwork *nn, Tensor *X, Tensor *Y) {
     float accuracy = (float)correct / Y->shape[0];
     
     return accuracy;
+}
+
+void nn_save_model(const NeuralNetwork *nn, const char *filename) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        fprintf(stderr, "Failed to open file for saving model\n");
+        return;
+    }
+
+    printf("Saving model: input_size=%u, hidden_size=%u, output_size=%u\n", nn->input_size, nn->hidden_size, nn->output_size);
+
+    // Save layer sizes
+    fwrite(&nn->input_size, sizeof(uint16_t), 1, file);
+    fwrite(&nn->hidden_size, sizeof(uint16_t), 1, file);
+    fwrite(&nn->output_size, sizeof(uint16_t), 1, file);
+
+    // Save weights and biases
+    fwrite(nn->W1->data, sizeof(float), nn->W1->size, file);
+    fwrite(nn->b1->data, sizeof(float), nn->b1->size, file);
+    fwrite(nn->W2->data, sizeof(float), nn->W2->size, file);
+    fwrite(nn->b2->data, sizeof(float), nn->b2->size, file);
+
+    fclose(file);
+}
+
+NeuralNetwork *nn_load_model(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        fprintf(stderr, "Failed to open file for loading model\n");
+        return NULL;
+    }
+
+    uint16_t input_size, hidden_size, output_size;
+    // Read layer sizes
+
+    fread(&input_size, sizeof(uint16_t), 1, file);
+    fread(&hidden_size, sizeof(uint16_t), 1, file);
+    fread(&output_size, sizeof(uint16_t), 1, file);
+
+    NeuralNetwork *nn = nn_create(input_size, hidden_size, output_size);
+
+    if (!nn) {
+        fprintf(stderr, "Failed to create neural network for loading model\n");
+        fclose(file);
+        return NULL;
+    }
+
+    // Load weights and biases
+    fread(nn->W1->data, sizeof(float), nn->W1->size, file);
+    fread(nn->b1->data, sizeof(float), nn->b1->size, file);
+    fread(nn->W2->data, sizeof(float), nn->W2->size, file);
+    fread(nn->b2->data, sizeof(float), nn->b2->size, file);
+
+    fclose(file);
+    return nn;
 }
