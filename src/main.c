@@ -15,10 +15,10 @@ int main() {
     srand(time(NULL));
 
     // Load and preprocess data
-    Tensor *X_train = tensor_create_from_idx("data/train-images.idx3-ubyte");
-    Tensor *Y_train = tensor_create_from_idx("data/train-labels.idx1-ubyte");
-    Tensor *X_test = tensor_create_from_idx("data/t10k-images.idx3-ubyte");
-    Tensor *Y_test = tensor_create_from_idx("data/t10k-labels.idx1-ubyte");
+    Tensor *X_train = tensor_create_from_idx("data/train-images-idx3-ubyte");
+    Tensor *Y_train = tensor_create_from_idx("data/train-labels-idx1-ubyte");
+    Tensor *X_test = tensor_create_from_idx("data/t10k-images-idx3-ubyte");
+    Tensor *Y_test = tensor_create_from_idx("data/t10k-labels-idx1-ubyte");
     
     if (!X_train || !Y_train) {
         fprintf(stderr, "Failed to load training data\n");
@@ -69,6 +69,8 @@ int main() {
 
     printf("Model accuracy (tarining set): %.2f%%\n", accuracy_train * 100);
     printf("Model accuracy (test set): %.2f%%\n", accuracy_test * 100);
+
+    nn_save_model(nn, "bin/model.bin");
 
     // Cleanup
     nn_free(nn);

@@ -13,8 +13,8 @@ bin/
 .idea/
 
 # Dataset files
-data/*.idx3-ubyte
-data/*.idx1-ubyte
+data/*-idx3-ubyte
+data/*-idx1-ubyte
 
 # System specific files
 .DS_Store

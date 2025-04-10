@@ -10,7 +10,18 @@ git clone https://github.com/sahliaziz/digit-recognition-c
 cd digit-recognition-c
 ```
 
-2. Compile the program:
+2. Download and extract the dataset:
+```bash
+mkdir data
+cd data
+wget https://storage.googleapis.com/cvdf-datasets/mnist/train-images-idx3-ubyte.gz
+wget https://storage.googleapis.com/cvdf-datasets/mnist/train-labels-idx1-ubyte.gz
+wget https://storage.googleapis.com/cvdf-datasets/mnist/t10k-images-idx3-ubyte.gz
+wget https://storage.googleapis.com/cvdf-datasets/mnist/t10k-labels-idx1-ubyte.gz
+gunzip *.gz
+```
+
+3. Compile the program:
 ```bash
 make
 ```

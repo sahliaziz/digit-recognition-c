@@ -7,13 +7,14 @@ SRCS = src/main.c src/tensor.c src/neural_network.c
 OBJS = $(SRCS:.c=.o)
 
 # Output executable
-TARGET = run
+TARGET = bin/run
 
 # Default target
 all: $(TARGET)
 
 # Link the program
 $(TARGET): $(OBJS)
+	mkdir -p bin
 	$(CC) $(OBJS) -o $(TARGET) $(CFLAGS)
 
 # Compile source files
